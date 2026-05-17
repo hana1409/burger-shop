@@ -7,5 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class order extends Model
 {
-    use HasFactory;
+   protected $fillable = [
+        'user_id',
+        'nama_burger',
+        'jumlah',
+        'total_harga',
+        'special_request',
+        'status',
+    ];
 }

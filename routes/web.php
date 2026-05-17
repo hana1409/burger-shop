@@ -30,8 +30,8 @@ Route::post('/register', [AuthController::class, 'register'])
 Route::post('/login', [AuthController::class, 'login'])
     ->name('login');
 
-Route::post('/logout', [AuthController::class, 'logout'])
-    ->name('logout');
+// Pastikan rutenya seperti ini
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 
 
@@ -47,3 +47,4 @@ Route::post('/proses-bayar', [DashboardController::class, 'prosesBayar']);
 
 Route::post('/order', [DashboardController::class, 'order'])
     ->name('order');
+    

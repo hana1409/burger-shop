@@ -43,6 +43,27 @@
         .btn-struk-close:hover { background: #d35400; }
         .struk-item-qty { color: #888; font-size: 0.78rem; }
         .struk-success-icon { font-size: 3rem; margin-bottom: 8px; }
+
+        /* === MODAL PILIHAN PEMBAYARAN === */
+        .payment-method-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 9998; justify-content: center; align-items: flex-end; }
+        .payment-method-overlay.show { display: flex; animation: fadeOverlay 0.3s ease; }
+        .payment-method-box { background: #fff; border-radius: 28px 28px 0 0; padding: 30px 24px 36px; width: 100%; max-width: 700px; box-shadow: 0 -10px 40px rgba(0,0,0,0.15); animation: slideUpSheet 0.35s cubic-bezier(.22,1,.36,1); }
+        @keyframes slideUpSheet { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+        .payment-method-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+        .payment-method-subtitle { font-size: 0.82rem; color: #aaa; margin-bottom: 22px; }
+        .payment-option { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border: 2px solid #f0f0f0; border-radius: 18px; margin-bottom: 12px; cursor: pointer; transition: 0.2s; background: #fff; width: 100%; }
+        .payment-option:hover { border-color: #e67e22; background: #fff8f2; }
+        .payment-option.selected { border-color: #e67e22; background: #fff5ed; }
+        .payment-option .pay-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+        .payment-option .pay-info { flex: 1; text-align: left; }
+        .payment-option .pay-name { font-weight: 700; font-size: 0.95rem; color: #222; }
+        .payment-option .pay-desc { font-size: 0.78rem; color: #aaa; margin-top: 2px; }
+        .payment-option .pay-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; }
+        .payment-option.selected .pay-check { background: #e67e22; border-color: #e67e22; color: white; font-size: 12px; }
+        .btn-konfirmasi-bayar { width: 100%; margin-top: 8px; padding: 15px; border: none; background: #e67e22; color: white; border-radius: 16px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .btn-konfirmasi-bayar:hover { background: #d35400; }
+        .btn-konfirmasi-bayar:disabled { background: #ddd; color: #aaa; cursor: not-allowed; }
+        .pay-drag-bar { width: 40px; height: 4px; background: #eee; border-radius: 10px; margin: 0 auto 22px; }
     </style>
 </head>
 <body>
@@ -72,6 +93,52 @@
     <input type="hidden" name="cart_data" id="inputCartData">
 </form>
 
+<!-- ===== MODAL PILIHAN PEMBAYARAN ===== -->
+<div class="payment-method-overlay" id="paymentMethodOverlay">
+    <div class="payment-method-box">
+        <div class="pay-drag-bar"></div>
+        <div class="payment-method-title">Pilih Metode Pembayaran</div>
+        <div class="payment-method-subtitle">Pilih salah satu metode pembayaran di bawah ini</div>
+
+        <button class="payment-option" id="opt-dana" onclick="pilihMetode('dana')">
+            <div class="pay-icon" style="background:#f0f4ff;">
+            <img src="/images/dana.png" style="width:36px;height:36px;object-fit:contain;">
+        </div>
+            <div class="pay-info">
+                <div class="pay-name">DANA</div>
+                <div class="pay-desc">Bayar lewat dompet digital DANA</div>
+            </div>
+            <div class="pay-check" id="check-dana"></div>
+        </button>
+
+        <button class="payment-option" id="opt-qris" onclick="pilihMetode('qris')">
+            <div class="pay-icon" style="background:#fff0f0;">
+                <img src="/images/qris.png" style="width:36px;height:36px;object-fit:contain;">
+            </div>
+            <div class="pay-info">
+                <div class="pay-name">QRIS</div>
+                <div class="pay-desc">Scan QR dari semua aplikasi e-wallet</div>
+            </div>
+            <div class="pay-check" id="check-qris"></div>
+        </button>
+
+        <button class="payment-option" id="opt-qash" onclick="pilihMetode('qash')">
+            <div class="pay-icon" style="background:#f0fff5;">
+                <img src="/images/qash.png" style="width:36px;height:36px;object-fit:contain;">
+            </div>
+            <div class="pay-info">
+                <div class="pay-name">QASH</div>
+                <div class="pay-desc">Bayar tunai di kasir</div>
+            </div>
+            <div class="pay-check" id="check-qash"></div>
+        </button>
+
+        <button class="btn-konfirmasi-bayar" id="btnKonfirmasiBayar" disabled onclick="konfirmasiBayar()">
+            Konfirmasi Pembayaran
+        </button>
+    </div>
+</div>
+
 <!-- ===== MODAL STRUK ===== -->
 <div class="struk-overlay" id="strukOverlay">
     <div class="struk-box" id="strukBox">
@@ -88,6 +155,10 @@
 
         <hr class="struk-divider">
 
+        <div class="struk-row">
+            <span class="nama text-muted">Metode Bayar</span>
+            <span class="harga" id="strukMetodeBayar"></span>
+        </div>
         <div class="struk-row">
             <span class="nama text-muted">Subtotal</span>
             <span class="harga" id="strukSubtotal"></span>
@@ -116,7 +187,7 @@
 
     function renderCheckout() {
         const list = document.getElementById('checkoutList');
-        let grandTotal = 0;
+        let grandTotal = 0; // untuk grantotal keseluruhan
         list.innerHTML = "";
 
         if(cart.length === 0) {
@@ -217,8 +288,43 @@
         window.location.href = '/dashboard?ganti=' + idx;
     }
 
-    // *** PROSES BAYAR → tampilkan STRUK ***
+    // *** TOMBOL BAYAR → tampilkan PILIHAN PEMBAYARAN dulu ***
     function prosesPayment() {
+        if(cart.length === 0) return;
+        // Reset pilihan metode
+        selectedMetode = null;
+        ['dana','qris','qash'].forEach(m => {
+            document.getElementById('opt-' + m).classList.remove('selected');
+            document.getElementById('check-' + m).innerHTML = '';
+        });
+        document.getElementById('btnKonfirmasiBayar').disabled = true;
+        // Tampilkan modal pilihan pembayaran
+        document.getElementById('paymentMethodOverlay').classList.add('show');
+    }
+
+    let selectedMetode = null;
+
+    function pilihMetode(metode) {
+        selectedMetode = metode;
+        ['dana','qris','qash'].forEach(m => {
+            document.getElementById('opt-' + m).classList.remove('selected');
+            document.getElementById('check-' + m).innerHTML = '';
+        });
+        document.getElementById('opt-' + metode).classList.add('selected');
+        document.getElementById('check-' + metode).innerHTML = '✓';
+        document.getElementById('btnKonfirmasiBayar').disabled = false;
+    }
+
+    function konfirmasiBayar() {
+        if(!selectedMetode) return;
+        // Tutup modal pembayaran
+        document.getElementById('paymentMethodOverlay').classList.remove('show');
+        // Lanjut tampilkan STRUK (logika asli dari prosesPayment)
+        tampilkanStruk();
+    }
+
+    // *** PROSES BAYAR → tampilkan STRUK ***
+    function tampilkanStruk() {
         if(cart.length === 0) return;
 
         let grandTotal = 0;
@@ -269,6 +375,15 @@
 
         // Tampilkan struk
         document.getElementById('strukOverlay').classList.add('show');
+
+        // Tambah info metode pembayaran di struk
+        let metodeLabel = {
+        dana: '<img src="/images/dana.png" style="height:22px;vertical-align:middle;margin-right:5px;"> DANA',
+        qris: '<img src="/images/qris.png" style="height:22px;vertical-align:middle;margin-right:5px;"> QRIS',
+        qash: '<img src="/images/qash.png" style="height:22px;vertical-align:middle;margin-right:5px;"> QASH'
+     };
+        let metodeRow = document.getElementById('strukMetodeBayar');
+        if(metodeRow) metodeRow.innerHTML = metodeLabel[selectedMetode] || '-';
 
         // Submit form ke server (background)
         document.getElementById('inputTotal').value = totalBayar;
